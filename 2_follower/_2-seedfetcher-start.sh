@@ -1,4 +1,4 @@
-!/bin/bash 
+#!/bin/bash 
 set -uo pipefail
 
 source ../config/dap.config
@@ -7,13 +7,13 @@ source ../config/utils.sh
 main() {
   ./precheck_k8s_followers.sh
 
-  login_as $DAP_ADMIN_USERNAME $DAP_ADMIN_PASSWORD
+  #login_as $DAP_ADMIN_USERNAME $DAP_ADMIN_PASSWORD
   ./stop
 
   initialize_variables
   if $CONJUR_FOLLOWERS_IN_CLUSTER; then
     initialize_config_maps
-    registry_login
+    #registry_login
     deploy_follower_pods
   fi
 }

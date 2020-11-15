@@ -1,40 +1,35 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: test-app-summon-sidecar
+  name: test-app-sidecar
   labels:
-    app: test-app-summon-sidecar
+    app: test-app-sidecar
 spec:
   ports:
   - protocol: TCP
     port: 8080
     targetPort: 8080
   selector:
-    app: test-app-summon-sidecar
+    app: test-app-sidecar
   type: LoadBalancer
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: test-app-summon-sidecar
----
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: test-app-summon-sidecar
-  name: test-app-summon-sidecar
+    app: test-app-sidecar
+  name: test-app-sidecar
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: test-app-summon-sidecar
+      app: test-app-sidecar
   template:
     metadata:
       labels:
-        app: test-app-summon-sidecar
+        app: test-app-sidecar
     spec:
-      serviceAccountName: test-app-summon-sidecar
+      serviceAccountName: {{ TEST_APP_SA }}
       hostAliases:
       - ip: "{{ CONJUR_MASTER_HOST_IP }}"
         hostnames:
@@ -135,7 +130,7 @@ spec:
             valueFrom:
               configMapKeyRef:
                 name: {{ APP_CONFIG_MAP }}
-                key: conjur-authn-login-sidecar
+                key: conjur-authn-login
         resources:
           requests:
             cpu: "50m"

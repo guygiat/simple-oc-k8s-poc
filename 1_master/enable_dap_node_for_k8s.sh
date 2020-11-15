@@ -33,19 +33,12 @@ load_follower_authn_policies() {
 
   sed -e "s#{{ AUTHENTICATOR_ID }}#$AUTHENTICATOR_ID#g" \
      ./policy/templates/cluster-authn-defs.template.yml |
-    sed -e "s#{{ CONJUR_NAMESPACE_NAME }}#$CONJUR_NAMESPACE_NAME#g" |
-    sed -e "s#{{ CONJUR_SERVICEACCOUNT_NAME }}#$CONJUR_SERVICEACCOUNT_NAME#g" \
+    sed -e "s#{{ CONJUR_NAMESPACE_NAME }}#$CONJUR_NAMESPACE_NAME#g" \
     > ./policy/cluster-authn-defs.yml
 
-  sed -e "s#{{ AUTHENTICATOR_ID }}#$AUTHENTICATOR_ID#g" \
-    ./policy/templates/seed-service.template.yml |
-    sed -e "s#{{ CONJUR_NAMESPACE_NAME }}#$CONJUR_NAMESPACE_NAME#g" |
-    sed -e "s#{{ CONJUR_SERVICEACCOUNT_NAME }}#$CONJUR_SERVICEACCOUNT_NAME#g" \
-    > ./policy/seed-service.yml
-
   POLICY_FILE_LIST="
+  ./policy/templates/seed-service.yml
   ./policy/cluster-authn-defs.yml
-  ./policy/seed-service.yml
   "
   for i in $POLICY_FILE_LIST; do
         echo "Loading policy file: $i"

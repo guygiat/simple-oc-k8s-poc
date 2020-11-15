@@ -6,7 +6,7 @@ source ../config/utils.sh
 
 announce "Deleting Conjur Followers."
 
-login_as $DAP_ADMIN_USERNAME $DAP_ADMIN_PASSWORD
+#login_as $DAP_ADMIN_USERNAME $DAP_ADMIN_PASSWORD
 
 echo "Deleting Follower pods."
 $CLI delete deployment/conjur-follower --force=true --grace-period=0 -n $CONJUR_NAMESPACE_NAME --ignore-not-found

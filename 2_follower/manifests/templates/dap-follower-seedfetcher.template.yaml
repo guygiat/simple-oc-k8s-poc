@@ -12,12 +12,15 @@ spec:
   selector:
     app: conjur-follower
 ---
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: conjur-follower
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: conjur-follower
   template:
     metadata:
       labels:

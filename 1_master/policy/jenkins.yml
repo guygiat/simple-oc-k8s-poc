@@ -1,0 +1,21 @@
+- !policy
+  id: jenkins
+  annotations:
+    description: Conjur policy for Jenkins
+    jenkins: true
+  body:  
+    - !host
+      id: master01
+      annotations:
+        jenkins: true
+    - &variables
+      - !variable 
+        id: docker_username
+        kind: username
+      - !variable
+        id: docker_password
+        kind: password
+    - !permit
+      role: !host master01
+      privileges: [read, execute] 
+      resources: *variables

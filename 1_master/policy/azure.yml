@@ -1,0 +1,18 @@
+- !policy
+  id: azure
+  annotations:
+    description: Conjur policy for Azure
+  body:  
+    - !host
+      id: azure01
+    - &variables
+      - !variable 
+        id: username
+        kind: username
+      - !variable
+        id: password
+        kind: password
+    - !permit
+      role: !host azure01
+      privileges: [read, execute] 
+      resources: *variables

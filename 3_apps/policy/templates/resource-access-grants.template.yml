@@ -11,7 +11,7 @@
 - !permit
   privileges: [ read, execute ]
   roles:
-  - !layer /{{ TEST_APP_NAMESPACE_NAME }}
+  - !host /{{ TEST_APP_SA }}
   resources:
   - !variable k8s-secrets/db-username
   - !variable k8s-secrets/db-password
@@ -19,4 +19,4 @@
 # Grant access to PAS secrets synched to Conjur cluster
 #- !grant
 #  role: !group Vault/LOB/Safe/delegation/consumers
-#  member: !layer {{ TEST_APP_NAMESPACE_NAME }}
+#  member: !host {{ TEST_APP_SA }}

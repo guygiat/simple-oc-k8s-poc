@@ -142,8 +142,14 @@ follower_up() {
 load_demo_policy() {
   # Laod policy & init variables
   load_policy_REST.sh root ./policy/demo-policy.yml
+  load_policy_REST.sh root ./policy/jenkins.yml
+  load_policy_REST.sh root ./policy/azure.yml
   var_value_add_REST.sh secrets/db-username "This-is-the-DB-username"
   var_value_add_REST.sh secrets/db-password $(openssl rand -hex 12)
+  var_value_add_REST.sh jenkins/docker_username "JenkinsUser1"
+  var_value_add_REST.sh jenkins/docker_password $(openssl rand -hex 12)
+  var_value_add_REST.sh azure/username "AzureUser1"
+  var_value_add_REST.sh azure/password $(openssl rand -hex 12)
 }
 
 main "$@"

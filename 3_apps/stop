@@ -4,7 +4,7 @@ set -eo pipefail
 source ../config/dap.config
 source ../config/utils.sh
 
-login_as $DEVELOPER_USERNAME $DEVELOPER_PASSWORD
+#login_as $DEVELOPER_USERNAME $DEVELOPER_PASSWORD
 
 if ! [ "${DOCKER_EMAIL}" = "" ]; then
   echo "Deleting image pull secret."
@@ -21,16 +21,14 @@ fi
 
 echo "Deleting test app/sidecar deployment."
 $CLI delete --ignore-not-found \
-  deployment/test-app-summon-sidecar \
-  service/test-app-summon-sidecar \
-  serviceaccount/test-app-summon-sidecar \
+  deployment/test-app-sidecar \
+  service/test-app-sidecar \
   -n $TEST_APP_NAMESPACE_NAME
 
 echo "Deleting test app/init container deployment."
 $CLI delete --ignore-not-found \
-  deployment/test-app-summon-init \
-  service/test-app-summon-init \
-  serviceaccount/test-app-summon-init \
+  deployment/test-app-init \
+  service/test-app-init \
   -n $TEST_APP_NAMESPACE_NAME
 
 echo "Deleting test app/secrets injection deployment."
@@ -43,7 +41,7 @@ $CLI delete --ignore-not-found \
 rm -f manifests/*.yaml manifests/*.yml
 
 echo "Waiting for pods to terminate"
-until [[ "$($CLI get pods -n $TEST_APP_NAMESPACE_NAME 2>&1 | grep test-app-summon)" == "" ]]; do
+until [[ "$($CLI get pods -n $TEST_APP_NAMESPACE_NAME 2>&1 | grep test-app)" == "" ]]; do
   sleep 4
   echo -n '.'
 done

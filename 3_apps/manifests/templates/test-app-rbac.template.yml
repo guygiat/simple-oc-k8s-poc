@@ -1,0 +1,29 @@
+# Define project namespace
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ TEST_APP_NAMESPACE_NAME }}
+  labels:
+    name: {{ TEST_APP_NAMESPACE_NAME }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ TEST_APP_SA }}
+  namespace: {{ TEST_APP_NAMESPACE_NAME }}
+---
+# Grant the authentication service account access to pods in testapps namespace
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: dap-authn-service
+  namespace: {{ TEST_APP_NAMESPACE_NAME }}  
+subjects:
+- kind: ServiceAccount
+  name: {{ CONJUR_SERVICEACCOUNT_NAME }}
+  namespace: {{ CONJUR_NAMESPACE_NAME }}
+roleRef:
+  kind: ClusterRole
+  name: dap-authn-role
+  apiGroup: rbac.authorization.k8s.io

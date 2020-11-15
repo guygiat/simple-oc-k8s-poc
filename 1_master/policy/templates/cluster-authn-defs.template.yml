@@ -16,24 +16,36 @@
 
   - !webservice
     annotations:
-      description: authn service for cluster
+      description: authn service for cluster {{ AUTHENTICATOR_ID }}
 
-  - !layer apps
+  # Hosts that can authenticate become members of the
+  # `consumers` group.
+  - !group consumers
 
-  - &follower_service_accounts
-    - !host
-      id: apps/{{ CONJUR_NAMESPACE_NAME }}/service_account/{{ CONJUR_SERVICEACCOUNT_NAME }}
-      annotations:
-        kubernetes/authentication-container-name: authenticator
-        kubernetes: "true"
-
-  # Grant apps role to service accounts
-  - !grant
-    role: !layer apps
-    member: *follower_service_accounts
-
-  # grant apps role authentication privileges
+  # Grant consumers group role authentication privileges
   - !permit
-    role: !layer apps
+    role: !group consumers
     privilege: [ read, authenticate ]
-    resource: !webservice 
+    resource: !webservice
+
+# =================================================
+# == Grant entitlements for Follower initialization
+# =================================================
+
+# Define Follower host identity for authentication service in CyberArk namespace
+- !host
+  id: {{ AUTHENTICATOR_ID }}/dap-authn-service
+  annotations:
+    authn-k8s/namespace: {{ CONJUR_NAMESPACE_NAME }}
+    authn-k8s/service_account/name: dap-authn-service
+    authn-k8s/authentication-container-name: authenticator
+
+# Grant roles that gives Follower host identity permission to:
+#  - authenticate to the cluster authn-k8s endpoint
+#  - execute the seed-generation webservice
+- !grant
+  roles:
+  - !group conjur/authn-k8s/{{ AUTHENTICATOR_ID }}/consumers
+  - !group conjur/seed-generation/consumers
+  members:
+  - !host {{ AUTHENTICATOR_ID }}/dap-authn-service

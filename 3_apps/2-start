@@ -2,12 +2,13 @@
 set -euo pipefail
 
 source ../config/dap.config
+source ../config/$PLATFORM.config
 source ../config/utils.sh
 
 main() {
   ./precheck_k8s_apps.sh
 
-  login_as $DEVELOPER_USERNAME $DEVELOPER_PASSWORD
+  #login_as $DEVELOPER_USERNAME $DEVELOPER_PASSWORD
   ./stop
 
   load_policies
@@ -21,23 +22,18 @@ load_policies() {
   announce "Initializing Conjur authorization policies..."
 
   sed -e "s#{{ AUTHENTICATOR_ID }}#$AUTHENTICATOR_ID#g" \
-    ./policy/templates/project-authn-defs.template.yml |
-    sed -e "s#{{ TEST_APP_NAMESPACE_NAME }}#$TEST_APP_NAMESPACE_NAME#g" \
-    > ./policy/project-authn-defs.yml
-
-  sed -e "s#{{ AUTHENTICATOR_ID }}#$AUTHENTICATOR_ID#g" \
-      ./policy/templates/app-identity-defs.template.yml |
-    sed -e "s#{{ TEST_APP_NAMESPACE_NAME }}#$TEST_APP_NAMESPACE_NAME#g" \
-    > ./policy/app-identity-defs.yml
+    ./policy/templates/app-authn-defs.template.yml |
+    sed -e "s#{{ TEST_APP_NAMESPACE_NAME }}#$TEST_APP_NAMESPACE_NAME#g" |
+    sed -e "s#{{ TEST_APP_SA }}#$TEST_APP_SA#g" \
+    > ./policy/app-authn-defs.yml
 
   sed -e "s#{{ AUTHENTICATOR_ID }}#$AUTHENTICATOR_ID#g" \
       ./policy/templates/resource-access-grants.template.yml |
-    sed -e "s#{{ TEST_APP_NAMESPACE_NAME }}#$TEST_APP_NAMESPACE_NAME#g" \
+    sed -e "s#{{ TEST_APP_SA }}#$TEST_APP_SA#g" \
     > ./policy/resource-access-grants.yml
 
   POLICY_FILE_LIST="
-policy/project-authn-defs.yml
-policy/app-identity-defs.yml
+policy/app-authn-defs.yml
 policy/resource-access-grants.yml
 "
   for i in $POLICY_FILE_LIST; do
@@ -58,7 +54,7 @@ deploy_test_apps() {
   copy_conjur_config_map
   create_app_config_map
 
-  registry_login
+  #registry_login
   deploy_sidecar_app
   deploy_init_container_app
   deploy_secrets_injection_app
@@ -90,30 +86,29 @@ create_app_config_map() {
   fi
 
   conjur_authenticator_url=$conjur_appliance_url/authn-k8s/$AUTHENTICATOR_ID
-  conjur_authn_login_prefix=host/conjur/authn-k8s/$AUTHENTICATOR_ID/apps/$TEST_APP_NAMESPACE_NAME/service_account
+  conjur_authn_login=host/$TEST_APP_SA
 
   $CLI create configmap $APP_CONFIG_MAP \
         -n $TEST_APP_NAMESPACE_NAME \
         --from-literal=conjur-authn-url="$conjur_authenticator_url" \
-        --from-literal=conjur-authn-login-init="$conjur_authn_login_prefix/test-app-summon-init" \
-        --from-literal=conjur-authn-login-sidecar="$conjur_authn_login_prefix/test-app-summon-sidecar" \
-        --from-literal=conjur-authn-login-injection="host/conjur/authn-k8s/$AUTHENTICATOR_ID/apps/$TEST_APP_NAMESPACE_NAME/*/*"
+        --from-literal=conjur-authn-login="$conjur_authn_login" 
 }
 
 ###########################
 deploy_sidecar_app() {
   sed -e "s#{{ TEST_APP_IMAGE }}#$TEST_APP_REG_IMAGE#g" \
-      ./manifests/templates/test-app-summon-sidecar.template.yml |
+      ./manifests/templates/test-app-sidecar.template.yml |
     sed -e "s#{{ AUTHENTICATOR_CLIENT_IMAGE }}#$AUTHENTICATOR_CLIENT_REG_IMAGE#g" |
     sed -e "s#{{ IMAGE_PULL_POLICY }}#$IMAGE_PULL_POLICY#g" |
     sed -e "s#{{ CONJUR_MASTER_HOST_NAME }}#$CONJUR_MASTER_HOST_NAME#g" |
     sed -e "s#{{ CONJUR_MASTER_HOST_IP }}#$CONJUR_MASTER_HOST_IP#g" |
     sed -e "s#{{ TEST_APP_NAMESPACE_NAME }}#$TEST_APP_NAMESPACE_NAME#g" |
+    sed -e "s#{{ TEST_APP_SA }}#$TEST_APP_SA#g" |
     sed -e "s#{{ CONJUR_CONFIG_MAP }}#$CONJUR_CONFIG_MAP#g" |
     sed -e "s#{{ APP_CONFIG_MAP }}#$APP_CONFIG_MAP#g" \
-    > ./manifests/test-app-summon-sidecar-$TEST_APP_NAMESPACE_NAME.yml
+    > ./manifests/test-app-sidecar-$TEST_APP_NAMESPACE_NAME.yml
 
-  $CLI create -f ./manifests/test-app-summon-sidecar-$TEST_APP_NAMESPACE_NAME.yml -n $TEST_APP_NAMESPACE_NAME
+  $CLI create -f ./manifests/test-app-sidecar-$TEST_APP_NAMESPACE_NAME.yml -n $TEST_APP_NAMESPACE_NAME
 
   echo "Test app/sidecar deployed."
 }
@@ -121,17 +116,18 @@ deploy_sidecar_app() {
 ###########################
 deploy_init_container_app() {
   sed -e "s#{{ TEST_APP_IMAGE }}#$TEST_APP_REG_IMAGE#g" \
-      ./manifests/templates/test-app-summon-init.template.yml |
+      ./manifests/templates/test-app-init.template.yml |
     sed -e "s#{{ AUTHENTICATOR_CLIENT_IMAGE }}#$AUTHENTICATOR_CLIENT_REG_IMAGE#g" |
     sed -e "s#{{ IMAGE_PULL_POLICY }}#$IMAGE_PULL_POLICY#g" |
     sed -e "s#{{ CONJUR_MASTER_HOST_NAME }}#$CONJUR_MASTER_HOST_NAME#g" |
     sed -e "s#{{ CONJUR_MASTER_HOST_IP }}#$CONJUR_MASTER_HOST_IP#g" |
     sed -e "s#{{ TEST_APP_NAMESPACE_NAME }}#$TEST_APP_NAMESPACE_NAME#g" |
+    sed -e "s#{{ TEST_APP_SA }}#$TEST_APP_SA#g" |
     sed -e "s#{{ CONJUR_CONFIG_MAP }}#$CONJUR_CONFIG_MAP#g" |
     sed -e "s#{{ APP_CONFIG_MAP }}#$APP_CONFIG_MAP#g" \
-    > ./manifests/test-app-summon-init-$TEST_APP_NAMESPACE_NAME.yml
+    > ./manifests/test-app-init-$TEST_APP_NAMESPACE_NAME.yml
 
-  $CLI create -f ./manifests/test-app-summon-init-$TEST_APP_NAMESPACE_NAME.yml -n $TEST_APP_NAMESPACE_NAME
+  $CLI create -f ./manifests/test-app-init-$TEST_APP_NAMESPACE_NAME.yml -n $TEST_APP_NAMESPACE_NAME
 
   echo "Test app/init-container deployed."
 }
@@ -147,6 +143,7 @@ deploy_secrets_injection_app() {
     sed -e "s#{{ CONJUR_MASTER_HOST_NAME }}#$CONJUR_MASTER_HOST_NAME#g" |
     sed -e "s#{{ CONJUR_MASTER_HOST_IP }}#$CONJUR_MASTER_HOST_IP#g" |
     sed -e "s#{{ TEST_APP_NAMESPACE_NAME }}#$TEST_APP_NAMESPACE_NAME#g" |
+    sed -e "s#{{ TEST_APP_SA }}#$TEST_APP_SA#g" |
     sed -e "s#{{ CONJUR_CONFIG_MAP }}#$CONJUR_CONFIG_MAP#g" |
     sed -e "s#{{ APP_CONFIG_MAP }}#$APP_CONFIG_MAP#g" \
     > ./manifests/test-app-secrets-injection-$TEST_APP_NAMESPACE_NAME.yml
@@ -159,7 +156,7 @@ deploy_secrets_injection_app() {
 ###########################
 wait_for_ready() {
   sleep 3
-  app_pod_name=$($CLI get pods -n $TEST_APP_NAMESPACE_NAME | grep test-app-summon-init | tail -1 | awk '{print $1}')
+  app_pod_name=$($CLI get pods -n $TEST_APP_NAMESPACE_NAME | grep test-app-init | tail -1 | awk '{print $1}')
   # Wait for app to be ready
   echo "Waiting for apps to be ready."
   sleep 3
@@ -174,14 +171,14 @@ verify_authentication() {
   clear
   announce "Retrieving secrets with access token."
 
-  sidecar_api_pod=$($CLI get pods -n $TEST_APP_NAMESPACE_NAME --no-headers -l app=test-app-summon-sidecar | awk '{ print $1 }')
+  sidecar_api_pod=$($CLI get pods -n $TEST_APP_NAMESPACE_NAME --no-headers -l app=test-app-sidecar | awk '{ print $1 }')
   if [[ "$sidecar_api_pod" != "" ]]; then
     echo "Sidecar + REST API: $($CLI exec -n $TEST_APP_NAMESPACE_NAME -c test-app $sidecar_api_pod -- /webapp.sh)"
     echo "Sidecar + Summon:"
     echo "$($CLI exec -n $TEST_APP_NAMESPACE_NAME -c test-app $sidecar_api_pod -- summon /webapp_summon.sh)"
   fi
 
-  init_api_pod=$($CLI get pods -n $TEST_APP_NAMESPACE_NAME --no-headers -l app=test-app-summon-init | awk '{ print $1 }')
+  init_api_pod=$($CLI get pods -n $TEST_APP_NAMESPACE_NAME --no-headers -l app=test-app-init | awk '{ print $1 }')
   if [[ "$init_api_pod" != "" ]]; then
     echo
     echo "Init Container + REST API: $($CLI exec -n $TEST_APP_NAMESPACE_NAME -c test-app $init_api_pod -- /webapp.sh)"
