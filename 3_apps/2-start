@@ -87,11 +87,13 @@ create_app_config_map() {
 
   conjur_authenticator_url=$conjur_appliance_url/authn-k8s/$AUTHENTICATOR_ID
   conjur_authn_login=host/$TEST_APP_SA
+  conjur_authn_login_secretless=host/$SECRETLESS_SA
 
   $CLI create configmap $APP_CONFIG_MAP \
         -n $TEST_APP_NAMESPACE_NAME \
         --from-literal=conjur-authn-url="$conjur_authenticator_url" \
-        --from-literal=conjur-authn-login="$conjur_authn_login" 
+        --from-literal=conjur-authn-login="$conjur_authn_login" \
+        --from-literal=conjur-authn-login-secretless="$conjur_authn_login_secretless"
 }
 
 ###########################

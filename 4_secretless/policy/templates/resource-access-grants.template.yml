@@ -1,0 +1,21 @@
+---
+- !policy
+  id: secretless
+  annotations:
+    description: This policy grants secrets access to secretless
+  body:
+  - &demoapps-secretless-variables
+    - !variable host
+    - !variable port
+    - !variable username
+    - !variable password
+
+- !permit
+  privileges: [ read, execute ]
+  role: !host /{{ SECRETLESS_SA }}
+  resources: *demoapps-secretless-variables
+
+# Grant access to PAS secrets synched to Conjur cluster
+#- !grant
+#  role: !group Vault/LOB/Safe/delegation/consumers
+#  member: !host {{ SECRETLESS_SA }}

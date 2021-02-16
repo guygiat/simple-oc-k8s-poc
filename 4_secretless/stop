@@ -1,0 +1,24 @@
+#!/bin/bash
+set -eo pipefail
+
+source ../config/dap.config
+source ../config/utils.sh
+
+echo "Deleting instantiated policies & manifests..."
+rm -f manifests/*.yml policy/*.yml
+
+echo "Deleting postgres."
+$CLI delete --ignore-not-found \
+  svc/secretless-db \
+  statefulsets/secretless-db-pg \
+  -n $TEST_APP_NAMESPACE_NAME
+
+echo "Deleting secretless deployment."
+$CLI delete --ignore-not-found \
+  deployment/secretless \
+  configmap/secretless-config \
+  -n $TEST_APP_NAMESPACE_NAME
+
+rm -f manifests/*.yaml manifests/*.yml
+
+echo "Secretless deleted."

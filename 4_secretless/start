@@ -1,0 +1,75 @@
+#!/bin/bash
+set -euo pipefail
+
+source ../config/dap.config
+source ../config/$PLATFORM.config
+source ../config/utils.sh
+
+main() {
+
+  ./stop
+
+  load_policies
+  deploy_postgres_db
+  deploy_secretless
+
+}
+
+############################
+load_policies() {
+  announce "Initializing Conjur authorization policies..."
+
+  sed -e "s#{{ AUTHENTICATOR_ID }}#$AUTHENTICATOR_ID#g" \
+    ./policy/templates/secretless-authn-defs.template.yml |
+    sed -e "s#{{ TEST_APP_NAMESPACE_NAME }}#$TEST_APP_NAMESPACE_NAME#g" |
+    sed -e "s#{{ SECRETLESS_SA }}#$SECRETLESS_SA#g" \
+    > ./policy/app-authn-defs.yml
+
+  sed -e "s#{{ AUTHENTICATOR_ID }}#$AUTHENTICATOR_ID#g" \
+      ./policy/templates/resource-access-grants.template.yml |
+    sed -e "s#{{ SECRETLESS_SA }}#$SECRETLESS_SA#g" \
+    > ./policy/resource-access-grants.yml
+
+  POLICY_FILE_LIST="
+policy/app-authn-defs.yml
+policy/resource-access-grants.yml
+"
+  for i in $POLICY_FILE_LIST; do
+    echo "Loading policy file: $i"
+    load_policy_REST.sh root "./$i"
+  done
+
+  # create initial value for variables
+  var_value_add_REST.sh secretless/host secretless-db.$TEST_APP_NAMESPACE_NAME
+  var_value_add_REST.sh secretless/port 5432
+  var_value_add_REST.sh secretless/username demoapp
+  var_value_add_REST.sh secretless/password test123
+
+  echo "Conjur policies loaded."
+}
+
+###########################
+deploy_postgres_db() {
+  sed -e "s#{{ TEST_APP_NAMESPACE_NAME }}#$TEST_APP_NAMESPACE_NAME#g" ./manifests/templates/postgres.template.yml > ./manifests/postgres-$TEST_APP_NAMESPACE_NAME.yml
+
+  $CLI create -f ./manifests/postgres-$TEST_APP_NAMESPACE_NAME.yml -n $TEST_APP_NAMESPACE_NAME
+
+  echo "postgresql deployed."
+}
+
+###########################
+deploy_secretless() {
+  sed -e "s#{{ TEST_APP_NAMESPACE_NAME }}#$TEST_APP_NAMESPACE_NAME#g" \
+      ./manifests/templates/secretless.template.yml |
+    sed -e "s#{{ SECRETLESS_BROKER_IMAGE }}#$SECRETLESS_BROKER_IMAGE#g" |
+    sed -e "s#{{ SECRETLESS_SA }}#$SECRETLESS_SA#g" |
+    sed -e "s#{{ CONJUR_CONFIG_MAP }}#$CONJUR_CONFIG_MAP#g" |
+    sed -e "s#{{ APP_CONFIG_MAP }}#$APP_CONFIG_MAP#g" \
+    > ./manifests/secretless-$TEST_APP_NAMESPACE_NAME.yml
+
+  $CLI create -f ./manifests/secretless-$TEST_APP_NAMESPACE_NAME.yml -n $TEST_APP_NAMESPACE_NAME
+
+  echo "Secretless deployed."
+}
+
+main "$@"
